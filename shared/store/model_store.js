@@ -17,7 +17,7 @@ ModelStore.prototype = Object.create(Super.prototype);
 ModelStore.prototype.constructor = ModelStore;
 
 ModelStore.prototype.set = function(model) {
-  var existingAttrs, id, key, modelName, newAttrs;
+  var existingModel, id, key, modelName, newAttrs;
 
   id = model.get(model.idAttribute);
   modelName = modelUtils.modelName(model.constructor);
@@ -27,31 +27,29 @@ ModelStore.prototype.set = function(model) {
   key = getModelStoreKey(modelName, id);
 
   /*
-  * We want to merge the model attrs with whatever is already
+  * If the model is already present in the store set the existing model attrs with the newer model's data
   * present in the store.
   */
-  existingAttrs = this.get(modelName, id) || {};
-  newAttrs = _.extend({}, existingAttrs, model.toJSON());
-  return Super.prototype.set.call(this, key, newAttrs, null);
+  existingModel = this.get(modelName, id);
+  if (existingModel == model) {
+    // already in store
+    return true;
+  }
+  else if (existingModel) {
+    // update existing model with new data
+    existingModel.set(model.toJSON());
+    return true;
+  }
+  else {
+    // new model in store
+    return Super.prototype.set.call(this, key, model, null);
+  }
 };
 
-ModelStore.prototype.get = function(modelName, id, returnModelInstance) {
-  var key, modelData;
-
-  if (returnModelInstance == null) {
-    returnModelInstance = false;
-  }
+ModelStore.prototype.get = function(modelName, id) {
+  var key;
   key = getModelStoreKey(modelName, id);
-  modelData = Super.prototype.get.call(this, key);
-  if (modelData) {
-    if (returnModelInstance) {
-      return modelUtils.getModel(modelName, modelData, {
-        app: this.app
-      });
-    } else {
-      return modelData;
-    }
-  }
+  return Super.prototype.get.call(this, key);
 };
 
 ModelStore.prototype._formatKey = function(key) {

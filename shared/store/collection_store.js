@@ -17,15 +17,24 @@ CollectionStore.prototype = Object.create(Super.prototype);
 CollectionStore.prototype.constructor = CollectionStore;
 
 CollectionStore.prototype.set = function(collection, params) {
-  var data, idAttribute, key;
+  var existingCollection, collectionName, key, ret;
+  collectionName = modelUtils.modelName(collection.constructor);
   params = params || collection.params;
-  key = getStoreKey(modelUtils.modelName(collection.constructor), params);
-  idAttribute = collection.model.prototype.idAttribute;
-  data = {
-    ids: collection.pluck(idAttribute),
-    meta: collection.meta
-  };
-  return Super.prototype.set.call(this, key, data, null);
+  key = getStoreKey(collectionName, params);
+  existingCollection = this.get(collectionName, params);
+  if (collection == existingCollection) {
+    // already in store
+    return true;
+  }
+  else if (existingCollection) {
+    // update existing collection with new data
+    existingCollection.reset(collection.toArray());
+    return true;
+  }
+  else {
+    // new collection in store
+    return Super.prototype.set.call(this, key, collection, null);
+  }
 };
 
 /*
